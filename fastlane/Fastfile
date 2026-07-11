@@ -78,12 +78,15 @@ platform :ios do
       build_number: current_build_number
     )
 
-    # force: true regenerates the provisioning profiles on every build so they
-    # always reflect the current capabilities (App Groups, HealthKit, NFC,
-    # Time Sensitive Notifications). Without this, a profile generated before a
-    # capability was added stays stale and gym fails with entitlement mismatches.
+    # setup_ci enables match readonly mode by default; disable it here so match
+    # can regenerate profiles. force: true regenerates the provisioning profiles
+    # on every build so they always reflect the current capabilities (App Groups,
+    # HealthKit, NFC, Time Sensitive Notifications). Without regeneration, a
+    # profile created before a capability was added stays stale and gym fails
+    # with entitlement mismatches.
     match(
       type: "appstore",
+      readonly: false,
       force: true,
       git_basic_authorization: Base64.strict_encode64("#{GITHUB_REPOSITORY_OWNER}:#{GH_PAT}"),
       app_identifier: [MAIN_APP_ID, WIDGET_APP_ID]

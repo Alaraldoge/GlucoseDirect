@@ -78,8 +78,13 @@ platform :ios do
       build_number: current_build_number
     )
 
+    # force: true regenerates the provisioning profiles on every build so they
+    # always reflect the current capabilities (App Groups, HealthKit, NFC,
+    # Time Sensitive Notifications). Without this, a profile generated before a
+    # capability was added stays stale and gym fails with entitlement mismatches.
     match(
       type: "appstore",
+      force: true,
       git_basic_authorization: Base64.strict_encode64("#{GITHUB_REPOSITORY_OWNER}:#{GH_PAT}"),
       app_identifier: [MAIN_APP_ID, WIDGET_APP_ID]
     )
@@ -152,19 +157,50 @@ platform :ios do
       )
       existing = bundle_id.get_capabilities.map(&:capability_type)
       capabilities.reject { |c| existing.include?(c) }.each do |cap|
-        bundle_id.create_capability(cap)
+        # Best effort: some capability strings may not be recognised by every
+        # App Store Connect API version. Don't let one unknown capability abort
+        # the whole run — the developer portal steps in the docs cover the rest.
+        begin
+          bundle_id.create_capability(cap)
+          UI.success("Enabled #{cap} on #{identifier}")
+        rescue => e
+          UI.important("Could not enable #{cap} on #{identifier}: #{e.message}")
+        end
       end
     end
+
+    # Capability type strings understood by the App Store Connect API.
+    time_sensitive = "USERNOTIFICATIONS_TIMESENSITIVE"
 
     configure_bundle_id("GlucoseDirect", MAIN_APP_ID, [
       Spaceship::ConnectAPI::BundleIdCapability::Type::APP_GROUPS,
       Spaceship::ConnectAPI::BundleIdCapability::Type::HEALTHKIT,
-      Spaceship::ConnectAPI::BundleIdCapability::Type::NFC_TAG_READING
+      Spaceship::ConnectAPI::BundleIdCapability::Type::NFC_TAG_READING,
+      time_sensitive
     ])
 
     configure_bundle_id("GlucoseDirect Widgets", WIDGET_APP_ID, [
       Spaceship::ConnectAPI::BundleIdCapability::Type::APP_GROUPS
     ])
+
+    # Create the shared App Group (same one Loop uses) and associate it with
+    # both App IDs so the generated profiles carry the application-groups
+    # entitlement value that the entitlements files expect. Best effort — if the
+    # API surface differs, follow the developer-portal steps in testflight.md.
+    begin
+      require "spaceship"
+      group = Spaceship::ConnectAPI::AppGroup.all.find { |g| g.identifier == APP_GROUP_ID } ||
+              Spaceship::ConnectAPI::AppGroup.create(identifier: APP_GROUP_ID, name: "Loop App Group")
+      [MAIN_APP_ID, WIDGET_APP_ID].each do |identifier|
+        bundle_id = Spaceship::ConnectAPI::BundleId.find(identifier)
+        next unless bundle_id && group
+        already = bundle_id.app_groups.map(&:id) rescue []
+        bundle_id.add_app_group(group.id) unless already.include?(group.id)
+        UI.success("Associated #{APP_GROUP_ID} with #{identifier}")
+      end
+    rescue => e
+      UI.important("Automatic App Group setup skipped (#{e.message}). See testflight.md to add '#{APP_GROUP_ID}' in the developer portal.")
+    end
   end
 
   desc "Create or renew the Distribution certificate and provisioning profiles"

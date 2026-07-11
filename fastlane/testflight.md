@@ -36,6 +36,25 @@ Set these under *Settings → Secrets and variables → Actions* on your fork:
 4. **4. Build GlucoseDirect** — archives a signed IPA and uploads it to
    TestFlight. Also runs automatically on the 2nd Sunday each month.
 
+## One-time capability & App Group setup (developer portal)
+
+The signed build needs these to be present on the App IDs. `2. Add Identifiers`
+tries to configure them automatically, but if a build fails with
+*"provisioning profile doesn't support …"* or *"doesn't match the entitlements
+file's value for com.apple.security.application-groups"*, set them manually at
+<https://developer.apple.com/account/resources>:
+
+1. **Identifiers → App Groups → (+)** — create `group.com.<TEAMID>.loopkit.LoopGroup`
+   (skip if it already exists from building Loop).
+2. **Identifiers → `com.<TEAMID>.glucosedirect` → Edit** — enable **App Groups**
+   (assign the group above), **HealthKit**, **NFC Tag Reading**, and
+   **Time Sensitive Notifications**. Save.
+3. **Identifiers → `com.<TEAMID>.glucosedirect.Widgets` → Edit** — enable
+   **App Groups** (assign the same group). Save.
+
+Then re-run **4. Build GlucoseDirect** — the build regenerates provisioning
+profiles (`match force: true`) so they pick up the updated capabilities.
+
 ## Shared App Group with Loop
 
 The build injects a per-user bundle identifier but **keeps the App Group fixed**

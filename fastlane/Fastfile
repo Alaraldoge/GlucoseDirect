@@ -57,13 +57,21 @@ platform :ios do
       key_content: "#{FASTLANE_KEY}"
     )
 
-    previous_build_number = latest_testflight_build_number(
-      app_identifier: MAIN_APP_ID,
-      api_key: api_key,
-      initial_build_number: 0
-    )
-
-    current_build_number = previous_build_number + 1
+    # On the very first upload the App Store Connect app record may have no
+    # builds yet (or the lookup may momentarily fail); fall back to 1 so the
+    # first TestFlight build always succeeds. The app record itself must exist
+    # (create it once under App Store Connect > My Apps).
+    current_build_number = 1
+    begin
+      previous_build_number = latest_testflight_build_number(
+        app_identifier: MAIN_APP_ID,
+        api_key: api_key,
+        initial_build_number: 0
+      )
+      current_build_number = previous_build_number + 1
+    rescue => e
+      UI.important("Could not read latest TestFlight build number, defaulting to 1: #{e.message}")
+    end
 
     increment_build_number(
       xcodeproj: PROJECT,

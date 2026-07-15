@@ -19,8 +19,8 @@ ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
 # Bundle identifiers are derived from the developer Team ID so every user builds
 # under their own namespace. The App Group is intentionally kept identical to
 # Loop's group so GlucoseDirect and Loop can share glucose readings.
-MAIN_APP_ID = "com.#{TEAMID}.glucosedirect"
-WIDGET_APP_ID = "com.#{TEAMID}.glucosedirect.Widgets"
+MAIN_APP_ID = "com.#{TEAMID}.libre-direct"
+WIDGET_APP_ID = "com.#{TEAMID}.libre-direct.Widgets"
 APP_GROUP_ID = "group.com.#{TEAMID}.loopkit.LoopGroup"
 
 PROJECT = "#{GITHUB_WORKSPACE}/GlucoseDirect.xcodeproj"
